@@ -19,6 +19,11 @@
     .control label { display:flex; justify-content:space-between; font-weight:650; font-size:14px; margin-bottom:7px; }
     input[type=range] { width:100%; accent-color:var(--blue); }
     select { width:100%; padding:10px; border:1px solid var(--line); border-radius:8px; font-size:15px; background:white; }
+    .actions { display:flex; align-items:center; gap:10px; margin-top:20px; }
+    button { border:0; border-radius:9px; padding:10px 15px; color:#fff; background:var(--blue); font-weight:700; cursor:pointer; box-shadow:0 4px 10px #1769aa25; }
+    button:hover { background:#12578f; }
+    button:disabled { opacity:.65; cursor:wait; }
+    .calc-status { color:var(--muted); font-size:12px; line-height:1.35; }
     .value { color:var(--blue); font-variant-numeric:tabular-nums; }
     .metrics { display:grid; grid-template-columns:1fr 1fr; gap:11px; }
     .metric { border:1px solid var(--line); border-radius:12px; padding:14px; background:#fbfdff; }
@@ -56,18 +61,19 @@
       <div class="control"><label>MgO (wt.%) <span id="mgv" class="value"></span></label><input id="mg" type="range" min="0" max="15" step="0.1" value="4" /></div>
       <div class="control"><label>FeO (wt.%) <span id="fev" class="value"></span></label><input id="fe" type="range" min="5" max="20" step="0.1" value="10" /></div>
       <div class="control"><label>Basicity, B = CaO/SiO₂</label><select id="b"><option value="1.1">1.1</option><option value="1.3" selected>1.3</option><option value="1.5">1.5</option></select></div>
+      <div class="actions"><button id="calculateBtn" type="button">Start calculation</button><span id="calcStatus" class="calc-status">Preview ready · adjust inputs, then calculate</span></div>
       <p class="note">The page reports the closest point in a 31,680-point grid generated with the locked HGB liquidus model and RBF-SVC range/phase models. It is a fast screening aid, not a new Thermo-Calc calculation.</p>
     </div>
     <div class="card">
       <h2>Surrogate output</h2>
       <div class="metrics">
-        <div class="metric"><small>Predicted liquidus</small><strong id="tl">—</strong></div>
-        <div class="metric"><small>Above-range probability</small><strong id="pa">—</strong></div>
-        <div class="metric"><small>Phase confidence</small><strong id="pp">—</strong></div>
-        <div class="metric"><small>4D support distance</small><strong id="dd">—</strong></div>
+        <div class="metric"><small>Predicted liquidus</small><strong id="tl">1642.4 K</strong></div>
+        <div class="metric"><small>Above-range probability</small><strong id="pa">0.0%</strong></div>
+        <div class="metric"><small>Phase confidence</small><strong id="pp">51.9%</strong></div>
+        <div class="metric"><small>4D support distance</small><strong id="dd">0.057</strong></div>
       </div>
-      <div id="phase" class="phase">Loading demo grid…</div>
-      <p id="nearest" class="note"></p>
+      <div id="phase" class="phase">Preview · predicted primary phase: CA2SIO4</div>
+      <p id="nearest" class="note">Preview grid point: Al₂O₃ 11.70%, MgO 4.29%, FeO 9.74%, B 1.3. Support cutoff d₉₅ = 0.244.</p>
     </div>
   </section>
   <section class="maps" aria-label="Composition slice maps">
@@ -111,7 +117,13 @@ function setupCanvas(canvas, height=300) {
   const w=Math.max(320, Math.round(rect.width)), h=Math.max(220, height);
   canvas.width=Math.round(w*dpr); canvas.height=Math.round(h*dpr);
   const ctx=canvas.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,w,h);
-  return {ctx,w,h};
+  return {ctx,w,h,dpr};
+}
+function tempRgb(v,vmin,vmax) {
+  const q=Math.max(0,Math.min(1,(v-vmin)/Math.max(1e-9,vmax-vmin)));
+  const stops=[[0,43,108],[.25,65,182],[.5,45,190],[.75,245,193],[1,180,35]];
+  for(let i=1;i<stops.length;i++) if(q<=stops[i][0]) { const a=stops[i-1], b=stops[i], t=(q-a[0])/(b[0]-a[0]); return [0,1,2].map(k=>Math.round(a[k+1]+t*(b[k+1]-a[k+1]))); }
+  return stops[stops.length-1].slice(1);
 }
 function drawAxes(ctx, w, h, als, mgs, left, top, plotW, plotH) {
   ctx.save(); ctx.strokeStyle='#617487'; ctx.fillStyle='#415466'; ctx.lineWidth=1; ctx.font="12px 'Times New Roman', Georgia, serif";
@@ -136,13 +148,17 @@ function drawMaps() {
   const left=48, right=12, top=18, bottom=38;
   const t=setupCanvas($('tempMap')); const plotW=t.w-left-right, plotH=t.h-top-bottom;
   const vals=slice.map(r=>r[4]), vmin=Math.min(...vals), vmax=Math.max(...vals);
-  const tlColor=v=>{const q=(v-vmin)/Math.max(1e-9,vmax-vmin), hue=220-220*q; return `hsl(${hue.toFixed(1)} 78% 56%)`;};
-  for(const row of slice){const g=cellGeometry(als,mgs,left,top,plotW,plotH,row[0],row[1]); t.ctx.fillStyle=tlColor(row[4]); t.ctx.fillRect(g.x,g.y,g.w+.4,g.h+.4);}
+  const tempGrid=Array.from({length:mgs.length},()=>Array(als.length).fill(vmin));
+  for(const row of slice){const i=als.reduce((best,v,idx)=>Math.abs(v-row[0])<Math.abs(als[best]-row[0])?idx:best,0), j=mgs.reduce((best,v,idx)=>Math.abs(v-row[1])<Math.abs(mgs[best]-row[1])?idx:best,0); tempGrid[j][i]=row[4];}
+  const pxW=Math.max(1,Math.round(plotW*t.dpr)), pxH=Math.max(1,Math.round(plotH*t.dpr));
+  const image=t.ctx.createImageData(pxW,pxH);
+  for(let py=0;py<pxH;py++){const gy=(pxH-1-py)/(pxH-1)*(mgs.length-1), j0=Math.floor(gy), j1=Math.min(mgs.length-1,j0+1), fy=gy-j0; for(let px=0;px<pxW;px++){const gx=px/(pxW-1)*(als.length-1), i0=Math.floor(gx), i1=Math.min(als.length-1,i0+1), fx=gx-i0; const v=(1-fx)*(1-fy)*tempGrid[j0][i0]+fx*(1-fy)*tempGrid[j0][i1]+(1-fx)*fy*tempGrid[j1][i0]+fx*fy*tempGrid[j1][i1]; const rgb=tempRgb(v,vmin,vmax), k=(py*pxW+px)*4; image.data[k]=rgb[0]; image.data[k+1]=rgb[1]; image.data[k+2]=rgb[2]; image.data[k+3]=255; }}
+  t.ctx.putImageData(image,Math.round(left*t.dpr),Math.round(top*t.dpr));
   const marker=cellGeometry(als,mgs,left,top,plotW,plotH,+$('al').value,+$('mg').value);
   t.ctx.strokeStyle='#ffffff'; t.ctx.lineWidth=2; t.ctx.strokeRect(marker.x+1,marker.y+1,marker.w-2,marker.h-2); drawAxes(t.ctx,t.w,t.h,als,mgs,left,top,plotW,plotH);
   $('tempMin').textContent=fmt(vmin,0)+' K'; $('tempMax').textContent=fmt(vmax,0)+' K';
   const p=setupCanvas($('phaseMap')); const pW=p.w-left-right, pH=p.h-top-bottom;
-  for(const row of slice){const g=cellGeometry(als,mgs,left,top,pW,pH,row[0],row[1]); p.ctx.fillStyle=phaseColors[row[6]]||'#8ea0ad'; p.ctx.fillRect(g.x,g.y,g.w+.4,g.h+.4); if(row[9]){p.ctx.strokeStyle='#14202b';p.ctx.lineWidth=1;p.ctx.strokeRect(g.x+.5,g.y+.5,g.w-1,g.h-1);}}
+  for(const row of slice){const g=cellGeometry(als,mgs,left,top,pW,pH,row[0],row[1]); p.ctx.fillStyle=phaseColors[row[6]]||'#8ea0ad'; p.ctx.fillRect(g.x,g.y,g.w+.6,g.h+.6); if(row[9]){p.ctx.strokeStyle='#14202b';p.ctx.globalAlpha=.42;p.ctx.lineWidth=.7;p.ctx.strokeRect(g.x+.35,g.y+.35,g.w-.7,g.h-.7);p.ctx.globalAlpha=1;}}
   p.ctx.strokeStyle='#ffffff'; p.ctx.lineWidth=2; p.ctx.strokeRect(marker.x+1,marker.y+1,marker.w-2,marker.h-2); drawAxes(p.ctx,p.w,p.h,als,mgs,left,top,pW,pH);
   const phases=[...new Set(slice.map(r=>r[6]))].sort(); $('phaseLegend').innerHTML=phases.map(name=>`<span class="legend-item"><span class="legend-swatch" style="background:${phaseColors[name]||'#8ea0ad'}"></span>${name}</span>`).join('');
 }
@@ -162,9 +178,18 @@ function refresh() {
   $('nearest').textContent='Nearest grid point: Al₂O₃ '+fmt(best[0],2)+'%, MgO '+fmt(best[1],2)+'%, FeO '+fmt(best[2],2)+'%, B '+fmt(best[3],1)+'. Support cutoff d₉₅ = '+fmt(state.metadata.d95,3)+'.';
   drawMaps();
 }
-['al','mg','fe','b'].forEach(id => $(id).addEventListener('input', refresh));
+function markDirty() { updateLabels(); $('calcStatus').textContent='Parameters changed · click Start calculation'; }
+['al','mg','fe'].forEach(id => $(id).addEventListener('input', markDirty));
+$('b').addEventListener('change', markDirty);
+async function startCalculation() {
+  if (!state.rows.length) { $('calcStatus').textContent='Loading demo grid… please wait'; return; }
+  const btn=$('calculateBtn'); btn.disabled=true; btn.textContent='Calculating…'; $('calcStatus').textContent='Calculating prediction and refreshing maps…';
+  await new Promise(resolve=>setTimeout(resolve,420));
+  refresh(); btn.disabled=false; btn.textContent='Start calculation'; $('calcStatus').textContent='Calculation complete · ready for another composition';
+}
+$('calculateBtn').addEventListener('click', startCalculation);
 window.addEventListener('resize', drawMaps);
-fetch('data/demo_grid.json').then(r=>r.json()).then(d=>{Object.assign(state,d); refresh();}).catch(e=>{$('phase').textContent='Demo grid could not be loaded. Run this page through a local web server.'; $('phase').className='phase warn';});
+fetch('data/demo_grid.json').then(r=>r.json()).then(d=>{Object.assign(state,d); refresh(); $('calcStatus').textContent='Preview ready · adjust inputs, then calculate';}).catch(e=>{$('calcStatus').textContent='Demo grid could not be loaded'; $('phase').textContent='Preview only · start a local web server to enable calculation'; $('phase').className='phase warn';});
 </script>
 </body>
 </html>
