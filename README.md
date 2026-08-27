@@ -1,6 +1,6 @@
 # Reliability-aware slag surrogate — public demonstration
 
-This repository is a compact public demonstration of the workflow described in the manuscript **“A reliability-aware four-dimensional thermodynamic surrogate for continuous design of Fe-saturated blast-furnace slags.”** It is intentionally designed to communicate the method and provide a quick interactive experience; it is **not** a full reproduction package.
+This repository is a compact public demonstration of the workflow described in the manuscript **“A reliability-aware four-dimensional thermodynamic surrogate for continuous design of Fe-saturated blast-furnace slags.”** It is designed to communicate the method through a quick interactive experience.
 
 ## What is included
 
@@ -15,15 +15,9 @@ This repository is a compact public demonstration of the workflow described in t
 
 Live demo: https://ustbtobyma.github.io/slag-thermodynamic-surrogate-demo/
 
-The page opens with a precomputed preview. After changing the composition controls, click **Start calculation** to update the nearest-grid prediction and the two linked slice maps. The liquidus field is smoothly interpolated, while the categorical phase field uses spatially weighted phase regions; the trusted-domain boundary is shown as a dark contour.
+The page opens with a precomputed preview. After changing the composition controls, click **Start calculation** to update the nearest-grid prediction and the two linked slice maps. The liquidus field is smoothly interpolated, while the categorical phase field is displayed as spatially weighted phase regions.
 
-The demo does not call Thermo-Calc in the browser and should not be interpreted as an independent thermodynamic calculation. The Thermo-Calc database and proprietary software are not redistributed here.
-
-No blanket software/data license is asserted in this demonstration release. Please contact the authors before redistributing the derived data or models, and cite the manuscript and repository in any use.
-
-## Scope and caveats
-
-The public package keeps the evidence-layer concept visible while omitting private calculation traces, intermediate artifacts, local machine paths, and obsolete model releases. The displayed predictions are surrogate outputs under the stated composition bounds and redox/database context. For scientific use, consult the manuscript and perform an explicit Thermo-Calc recheck for any new composition.
+The page is a lightweight surrogate-model demonstration; full method details are provided in the associated manuscript.
 
 ## Citation
 

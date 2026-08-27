@@ -62,7 +62,7 @@
       <div class="control"><label>FeO (wt.%) <span id="fev" class="value"></span></label><input id="fe" type="range" min="5" max="20" step="0.1" value="10" /></div>
       <div class="control"><label>Basicity, B = CaO/SiO₂</label><select id="b"><option value="1.1">1.1</option><option value="1.3" selected>1.3</option><option value="1.5">1.5</option></select></div>
       <div class="actions"><button id="calculateBtn" type="button">Start calculation</button><span id="calcStatus" class="calc-status">Preview ready · adjust inputs, then calculate</span></div>
-      <p class="note">The page reports the closest point in a 31,680-point grid generated with the locked HGB liquidus model and RBF-SVC range/phase models. It is a fast screening aid, not a new Thermo-Calc calculation.</p>
+      <p class="note">Adjust the controls to explore the model response across the public demonstration composition space.</p>
     </div>
     <div class="card">
       <h2>Surrogate output</h2>
@@ -90,10 +90,10 @@
       <div id="phaseSubtitle" class="map-subtitle">Al₂O₃–MgO plane · loading slice…</div>
       <canvas id="phaseMap" class="map" aria-label="Predicted primary phase map"></canvas>
       <div id="phaseLegend" class="legend" aria-label="Primary phase legend"></div>
-      <p class="note map-note">Solid colors denote the predicted primary phase; the dark contour marks the boundary of the trusted interpolation region (d₄D ≤ d₉₅).</p>
+      <p class="note map-note">Colors show the predicted primary phase on the selected composition slice.</p>
     </div>
   </section>
-  <footer>Model concept: task-specific liquidus regression, range-status classification, phase classification, and explicit local-support screening. Data shown here are a public demonstration subset.</footer>
+  <footer>Interactive demonstration of task-specific liquidus and phase surrogate modeling.</footer>
 </main>
 <script>
 const state = { columns: [], rows: [], metadata: {} };
@@ -161,15 +161,11 @@ function drawMaps() {
   const p=setupCanvas($('phaseMap')); const pW=p.w-left-right, pH=p.h-top-bottom;
   const phaseNames=[...new Set(slice.map(r=>r[6]))].sort(), phaseIds=new Map(phaseNames.map((name,i)=>[name,i]));
   const phaseGrid=Array.from({length:mgs.length},()=>Array(als.length).fill(phaseNames[0]));
-  const trustGrid=Array.from({length:mgs.length},()=>Array(als.length).fill(0));
-  for(const row of slice){const i=als.reduce((best,v,idx)=>Math.abs(v-row[0])<Math.abs(als[best]-row[0])?idx:best,0), j=mgs.reduce((best,v,idx)=>Math.abs(v-row[1])<Math.abs(mgs[best]-row[1])?idx:best,0); phaseGrid[j][i]=row[6]; trustGrid[j][i]=row[9]?1:0;}
+  for(const row of slice){const i=als.reduce((best,v,idx)=>Math.abs(v-row[0])<Math.abs(als[best]-row[0])?idx:best,0), j=mgs.reduce((best,v,idx)=>Math.abs(v-row[1])<Math.abs(mgs[best]-row[1])?idx:best,0); phaseGrid[j][i]=row[6];}
   const pPxW=Math.max(1,Math.round(pW*p.dpr)), pPxH=Math.max(1,Math.round(pH*p.dpr));
-  const phaseImage=p.ctx.createImageData(pPxW,pPxH), trustMask=new Uint8Array(pPxW*pPxH);
+  const phaseImage=p.ctx.createImageData(pPxW,pPxH);
   const phaseRgb=phaseNames.map(name=>hexRgb(phaseColors[name]||'#8ea0ad'));
-  for(let py=0;py<pPxH;py++){const gy=(pPxH-1-py)/(pPxH-1)*(mgs.length-1), j0=Math.floor(gy), j1=Math.min(mgs.length-1,j0+1), fy=gy-j0; for(let px=0;px<pPxW;px++){const gx=px/(pPxW-1)*(als.length-1), i0=Math.floor(gx), i1=Math.min(als.length-1,i0+1), fx=gx-i0; const weights=[(1-fx)*(1-fy),fx*(1-fy),(1-fx)*fy,fx*fy], names=[phaseGrid[j0][i0],phaseGrid[j0][i1],phaseGrid[j1][i0],phaseGrid[j1][i1]], scores=new Float32Array(phaseNames.length); for(let n=0;n<4;n++) scores[phaseIds.get(names[n])]+=weights[n]; let winner=0; for(let n=1;n<scores.length;n++) if(scores[n]>scores[winner]) winner=n; const rgb=phaseRgb[winner], k=(py*pPxW+px)*4; phaseImage.data[k]=rgb[0]; phaseImage.data[k+1]=rgb[1]; phaseImage.data[k+2]=rgb[2]; phaseImage.data[k+3]=255; const trust=(1-fx)*(1-fy)*trustGrid[j0][i0]+fx*(1-fy)*trustGrid[j0][i1]+(1-fx)*fy*trustGrid[j1][i0]+fx*fy*trustGrid[j1][i1]; trustMask[py*pPxW+px]=trust>=.5?1:0; }}
-  const boundary=new Uint8Array(pPxW*pPxH);
-  for(let py=1;py<pPxH-1;py++) for(let px=1;px<pPxW-1;px++){const k=py*pPxW+px, v=trustMask[k]; if(v!==trustMask[k-1]||v!==trustMask[k+1]||v!==trustMask[k-pPxW]||v!==trustMask[k+pPxW]) boundary[k]=1;}
-  for(let py=1;py<pPxH-1;py++) for(let px=1;px<pPxW-1;px++){const k=py*pPxW+px; if(boundary[k]||boundary[k-1]||boundary[k+1]||boundary[k-pPxW]||boundary[k+pPxW]){const q=k*4; phaseImage.data[q]=20;phaseImage.data[q+1]=32;phaseImage.data[q+2]=43;}}
+  for(let py=0;py<pPxH;py++){const gy=(pPxH-1-py)/(pPxH-1)*(mgs.length-1), j0=Math.floor(gy), j1=Math.min(mgs.length-1,j0+1), fy=gy-j0; for(let px=0;px<pPxW;px++){const gx=px/(pPxW-1)*(als.length-1), i0=Math.floor(gx), i1=Math.min(als.length-1,i0+1), fx=gx-i0; const weights=[(1-fx)*(1-fy),fx*(1-fy),(1-fx)*fy,fx*fy], names=[phaseGrid[j0][i0],phaseGrid[j0][i1],phaseGrid[j1][i0],phaseGrid[j1][i1]], scores=new Float32Array(phaseNames.length); for(let n=0;n<4;n++) scores[phaseIds.get(names[n])]+=weights[n]; let winner=0; for(let n=1;n<scores.length;n++) if(scores[n]>scores[winner]) winner=n; const rgb=phaseRgb[winner], k=(py*pPxW+px)*4; phaseImage.data[k]=rgb[0]; phaseImage.data[k+1]=rgb[1]; phaseImage.data[k+2]=rgb[2]; phaseImage.data[k+3]=255; }}
   p.ctx.putImageData(phaseImage,Math.round(left*p.dpr),Math.round(top*p.dpr));
   p.ctx.strokeStyle='#ffffff'; p.ctx.lineWidth=2; p.ctx.strokeRect(marker.x+1,marker.y+1,marker.w-2,marker.h-2); drawAxes(p.ctx,p.w,p.h,als,mgs,left,top,pW,pH);
   $('phaseLegend').innerHTML=phaseNames.map(name=>`<span class="legend-item"><span class="legend-swatch" style="background:${phaseColors[name]||'#8ea0ad'}"></span>${name}</span>`).join('');
