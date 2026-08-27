@@ -27,6 +27,17 @@
     .phase { margin:16px 0 0; padding:14px; border-radius:12px; background:#edf7f2; color:#145c43; font-weight:700; }
     .phase.warn { background:#fff6e6; color:#805200; }
     .note { color:var(--muted); font-size:13px; line-height:1.5; margin-top:17px; }
+    .maps { display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-top:18px; }
+    .map-card { min-width:0; }
+    .map-card h2 { margin-bottom:4px; }
+    .map-subtitle { color:var(--muted); font-size:12px; min-height:18px; }
+    canvas.map { display:block; width:100%; height:300px; margin-top:8px; border:1px solid var(--line); border-radius:10px; background:#fff; }
+    .colorbar { height:10px; border-radius:5px; margin:3px 0 4px; background:linear-gradient(90deg,#2b6cb0,#55a6c8,#f6d365,#e76f51,#b42318); }
+    .colorbar-labels { display:flex; justify-content:space-between; color:var(--muted); font-size:11px; font-variant-numeric:tabular-nums; }
+    .legend { display:flex; flex-wrap:wrap; gap:6px 10px; margin-top:8px; min-height:24px; }
+    .legend-item { display:inline-flex; align-items:center; gap:4px; color:var(--muted); font-size:11px; }
+    .legend-swatch { width:11px; height:11px; border-radius:2px; border:1px solid #ffffff; box-shadow:0 0 0 1px #b9c6d2; }
+    .map-note { margin-top:10px; }
     footer { margin-top:20px; color:var(--muted); font-size:12px; line-height:1.5; }
     code { background:#eef3f7; border-radius:4px; padding:2px 5px; }
     @media (max-width:760px) { .layout { grid-template-columns:1fr; } .hero { padding:24px; } }
@@ -59,13 +70,82 @@
       <p id="nearest" class="note"></p>
     </div>
   </section>
+  <section class="maps" aria-label="Composition slice maps">
+    <div class="card map-card">
+      <h2>Liquidus temperature slice</h2>
+      <div id="tempSubtitle" class="map-subtitle">Al₂O₃–MgO plane · loading slice…</div>
+      <canvas id="tempMap" class="map" aria-label="Predicted liquidus temperature map"></canvas>
+      <div id="tempBar" class="colorbar" aria-hidden="true"></div>
+      <div class="colorbar-labels"><span id="tempMin">—</span><span>Predicted liquidus (K)</span><span id="tempMax">—</span></div>
+      <p class="note map-note">Color shows the predicted liquidus field on the selected FeO/basicity slice. The white marker is the current composition.</p>
+    </div>
+    <div class="card map-card">
+      <h2>Primary-phase slice</h2>
+      <div id="phaseSubtitle" class="map-subtitle">Al₂O₃–MgO plane · loading slice…</div>
+      <canvas id="phaseMap" class="map" aria-label="Predicted primary phase map"></canvas>
+      <div id="phaseLegend" class="legend" aria-label="Primary phase legend"></div>
+      <p class="note map-note">Solid colors denote the predicted primary phase; dark cell outlines mark trusted interpolation points (d₄D ≤ d₉₅).</p>
+    </div>
+  </section>
   <footer>Model concept: task-specific liquidus regression, range-status classification, phase classification, and explicit local-support screening. Data shown here are a public demonstration subset.</footer>
 </main>
 <script>
 const state = { columns: [], rows: [], metadata: {} };
 const $ = id => document.getElementById(id);
+const phaseColors = { CA2SIO4:'#e07a5f', MELILITE:'#3d5a80', MERWINITE:'#81b29a', MONOXIDE:'#f2cc8f', OLIVINE:'#8a5a44', SPINEL:'#577590' };
 function fmt(x, n=2) { return Number(x).toFixed(n); }
 function updateLabels() { $('alv').textContent=fmt($('al').value,1); $('mgv').textContent=fmt($('mg').value,1); $('fev').textContent=fmt($('fe').value,1); }
+function nearestValue(values, target) { return values.reduce((a,b)=>Math.abs(b-target)<Math.abs(a-target)?b:a, values[0]); }
+function getSlice() {
+  const feVals=[...new Set(state.rows.map(r=>r[2]))].sort((a,b)=>a-b);
+  const bTarget=+$('b').value, feTarget=+$('fe').value;
+  const fe=nearestValue(feVals, feTarget);
+  const slice=state.rows.filter(r=>Math.abs(r[2]-fe)<1e-7 && Math.abs(r[3]-bTarget)<1e-7);
+  const als=[...new Set(slice.map(r=>r[0]))].sort((a,b)=>a-b);
+  const mgs=[...new Set(slice.map(r=>r[1]))].sort((a,b)=>a-b);
+  const byKey=new Map(slice.map(r=>[r[0].toFixed(5)+'|'+r[1].toFixed(5),r]));
+  return { fe, b:bTarget, slice, als, mgs, byKey };
+}
+function setupCanvas(canvas, height=300) {
+  const rect=canvas.getBoundingClientRect(), dpr=window.devicePixelRatio||1;
+  const w=Math.max(320, Math.round(rect.width)), h=Math.max(220, height);
+  canvas.width=Math.round(w*dpr); canvas.height=Math.round(h*dpr);
+  const ctx=canvas.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,w,h);
+  return {ctx,w,h};
+}
+function drawAxes(ctx, w, h, als, mgs, left, top, plotW, plotH) {
+  ctx.save(); ctx.strokeStyle='#617487'; ctx.fillStyle='#415466'; ctx.lineWidth=1; ctx.font="12px 'Times New Roman', Georgia, serif";
+  ctx.beginPath(); ctx.moveTo(left,top+plotH); ctx.lineTo(left+plotW,top+plotH); ctx.moveTo(left,top); ctx.lineTo(left,top+plotH); ctx.stroke();
+  const xTicks=[0,Math.floor((als.length-1)/2),als.length-1], yTicks=[0,Math.floor((mgs.length-1)/2),mgs.length-1];
+  ctx.textAlign='center'; xTicks.forEach(i=>{const x=left+(i+.5)*plotW/als.length; ctx.fillText(fmt(als[i],1),x,top+plotH+16);});
+  ctx.textAlign='right'; yTicks.forEach(i=>{const y=top+plotH-(i+.5)*plotH/mgs.length+4; ctx.fillText(fmt(mgs[i],1),left-6,y);});
+  ctx.textAlign='center'; ctx.fillText('Al₂O₃ (wt.%)',left+plotW/2,h-7);
+  ctx.save(); ctx.translate(12,top+plotH/2); ctx.rotate(-Math.PI/2); ctx.fillText('MgO (wt.%)',0,0); ctx.restore(); ctx.restore();
+}
+function cellGeometry(als,mgs,left,top,plotW,plotH,al,mg) {
+  const i=als.reduce((best,v,idx)=>Math.abs(v-al)<Math.abs(als[best]-al)?idx:best,0);
+  const j=mgs.reduce((best,v,idx)=>Math.abs(v-mg)<Math.abs(mgs[best]-mg)?idx:best,0);
+  return { x:left+i*plotW/als.length, y:top+plotH-(j+1)*plotH/mgs.length, w:plotW/als.length, h:plotH/mgs.length };
+}
+function drawMaps() {
+  if (!state.rows.length) return;
+  const {fe,b, slice, als, mgs}=getSlice();
+  if (!slice.length) return;
+  $('tempSubtitle').textContent=`Al₂O₃–MgO plane · FeO = ${fmt(fe,1)} wt.% · B = ${fmt(b,1)}`;
+  $('phaseSubtitle').textContent=`Al₂O₃–MgO plane · FeO = ${fmt(fe,1)} wt.% · B = ${fmt(b,1)}`;
+  const left=48, right=12, top=18, bottom=38;
+  const t=setupCanvas($('tempMap')); const plotW=t.w-left-right, plotH=t.h-top-bottom;
+  const vals=slice.map(r=>r[4]), vmin=Math.min(...vals), vmax=Math.max(...vals);
+  const tlColor=v=>{const q=(v-vmin)/Math.max(1e-9,vmax-vmin), hue=220-220*q; return `hsl(${hue.toFixed(1)} 78% 56%)`;};
+  for(const row of slice){const g=cellGeometry(als,mgs,left,top,plotW,plotH,row[0],row[1]); t.ctx.fillStyle=tlColor(row[4]); t.ctx.fillRect(g.x,g.y,g.w+.4,g.h+.4);}
+  const marker=cellGeometry(als,mgs,left,top,plotW,plotH,+$('al').value,+$('mg').value);
+  t.ctx.strokeStyle='#ffffff'; t.ctx.lineWidth=2; t.ctx.strokeRect(marker.x+1,marker.y+1,marker.w-2,marker.h-2); drawAxes(t.ctx,t.w,t.h,als,mgs,left,top,plotW,plotH);
+  $('tempMin').textContent=fmt(vmin,0)+' K'; $('tempMax').textContent=fmt(vmax,0)+' K';
+  const p=setupCanvas($('phaseMap')); const pW=p.w-left-right, pH=p.h-top-bottom;
+  for(const row of slice){const g=cellGeometry(als,mgs,left,top,pW,pH,row[0],row[1]); p.ctx.fillStyle=phaseColors[row[6]]||'#8ea0ad'; p.ctx.fillRect(g.x,g.y,g.w+.4,g.h+.4); if(row[9]){p.ctx.strokeStyle='#14202b';p.ctx.lineWidth=1;p.ctx.strokeRect(g.x+.5,g.y+.5,g.w-1,g.h-1);}}
+  p.ctx.strokeStyle='#ffffff'; p.ctx.lineWidth=2; p.ctx.strokeRect(marker.x+1,marker.y+1,marker.w-2,marker.h-2); drawAxes(p.ctx,p.w,p.h,als,mgs,left,top,pW,pH);
+  const phases=[...new Set(slice.map(r=>r[6]))].sort(); $('phaseLegend').innerHTML=phases.map(name=>`<span class="legend-item"><span class="legend-swatch" style="background:${phaseColors[name]||'#8ea0ad'}"></span>${name}</span>`).join('');
+}
 function refresh() {
   updateLabels();
   if (!state.rows.length) return;
@@ -80,8 +160,10 @@ function refresh() {
   $('phase').textContent=(trust?'Trusted interpolation point':'Outside trusted screen')+' · predicted primary phase: '+phase;
   $('phase').className='phase'+(trust?'':' warn');
   $('nearest').textContent='Nearest grid point: Al₂O₃ '+fmt(best[0],2)+'%, MgO '+fmt(best[1],2)+'%, FeO '+fmt(best[2],2)+'%, B '+fmt(best[3],1)+'. Support cutoff d₉₅ = '+fmt(state.metadata.d95,3)+'.';
+  drawMaps();
 }
 ['al','mg','fe','b'].forEach(id => $(id).addEventListener('input', refresh));
+window.addEventListener('resize', drawMaps);
 fetch('data/demo_grid.json').then(r=>r.json()).then(d=>{Object.assign(state,d); refresh();}).catch(e=>{$('phase').textContent='Demo grid could not be loaded. Run this page through a local web server.'; $('phase').className='phase warn';});
 </script>
 </body>
