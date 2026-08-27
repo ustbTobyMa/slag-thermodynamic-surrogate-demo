@@ -8,14 +8,14 @@ This repository is a compact public demonstration of the workflow described in t
 - `data/candidate_confirmation_top6.csv`: the six representative candidate rechecks reported in the manuscript.
 - `models/`: the locked demonstration models: HGB for liquidus temperature and RBF-SVC models for range status and primary phase.
 - `data/demo_grid.json`: precomputed predictions on a 31,680-point four-dimensional grid for the browser demo.
-- `docs/index.html`: a dependency-free interactive page suitable for GitHub Pages.
+- `docs/index.html`: a dependency-free interactive page suitable for GitHub Pages, with a ready-to-view default preview, an explicit **Start calculation** action, and linked Al₂O₃–MgO liquidus-temperature and primary-phase slice maps.
 - `scripts/prepare_release.py`: the transparent preparation script used to select the public tables and generate the demo grid.
 
 ## Interactive demo
 
 Live demo: https://ustbtobyma.github.io/slag-thermodynamic-surrogate-demo/
 
-The sliders return the closest point in the precomputed surrogate grid and report liquidus temperature, above-range probability, primary phase, phase confidence, and the trusted-interpolation status.
+The page opens with a precomputed preview. After changing the composition controls, click **Start calculation** to update the nearest-grid prediction and the two linked slice maps. The maps use smooth interpolation for liquidus temperature and discrete coloring for primary phase, with trusted-domain cells outlined.
 
 The demo does not call Thermo-Calc in the browser and should not be interpreted as an independent thermodynamic calculation. The Thermo-Calc database and proprietary software are not redistributed here.
 
