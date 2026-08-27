@@ -13,7 +13,9 @@ This repository is a compact public demonstration of the workflow described in t
 
 ## Interactive demo
 
-Open `docs/index.html` through GitHub Pages. The sliders return the closest point in the precomputed surrogate grid and report liquidus temperature, above-range probability, primary phase, phase confidence, and the trusted-interpolation status.
+Live demo: https://ustbtobyma.github.io/slag-thermodynamic-surrogate-demo/
+
+The sliders return the closest point in the precomputed surrogate grid and report liquidus temperature, above-range probability, primary phase, phase confidence, and the trusted-interpolation status.
 
 The demo does not call Thermo-Calc in the browser and should not be interpreted as an independent thermodynamic calculation. The Thermo-Calc database and proprietary software are not redistributed here.
 
