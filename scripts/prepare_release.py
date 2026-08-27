@@ -13,6 +13,7 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parents[1]
 PROJECT = ROOT.parent
 DATA_DIR = ROOT / "data"
+WEB_DATA_DIR = ROOT / "docs/data"
 MODEL_DIR = ROOT / "models"
 
 ANCHOR_SRC = PROJECT / "data/generated/continuous_4d_v1/all_calculations_combined_319_v1.csv"
@@ -114,7 +115,10 @@ def make_demo_grid() -> None:
             "purpose": "interactive demonstration; nearest precomputed surrogate-grid lookup",
         },
     }
-    (DATA_DIR / "demo_grid.json").write_text(json.dumps(payload, separators=(",", ":")), encoding="utf-8")
+    encoded = json.dumps(payload, separators=(",", ":"))
+    (DATA_DIR / "demo_grid.json").write_text(encoded, encoding="utf-8")
+    WEB_DATA_DIR.mkdir(parents=True, exist_ok=True)
+    (WEB_DATA_DIR / "demo_grid.json").write_text(encoded, encoding="utf-8")
 
 
 def copy_locked_models() -> None:
