@@ -82,7 +82,7 @@ function refresh() {
   $('nearest').textContent='Nearest grid point: Al₂O₃ '+fmt(best[0],2)+'%, MgO '+fmt(best[1],2)+'%, FeO '+fmt(best[2],2)+'%, B '+fmt(best[3],1)+'. Support cutoff d₉₅ = '+fmt(state.metadata.d95,3)+'.';
 }
 ['al','mg','fe','b'].forEach(id => $(id).addEventListener('input', refresh));
-fetch('../data/demo_grid.json').then(r=>r.json()).then(d=>{Object.assign(state,d); refresh();}).catch(e=>{$('phase').textContent='Demo grid could not be loaded. Run this page through a local web server.'; $('phase').className='phase warn';});
+fetch('data/demo_grid.json').then(r=>r.json()).then(d=>{Object.assign(state,d); refresh();}).catch(e=>{$('phase').textContent='Demo grid could not be loaded. Run this page through a local web server.'; $('phase').className='phase warn';});
 </script>
 </body>
 </html>
