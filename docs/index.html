@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='7' fill='%231769aa'/%3E%3C/svg%3E" />
   <title>Reliability-aware slag surrogate</title>
   <style>
     :root { --ink:#17212b; --muted:#5b6b7a; --line:#dfe7ee; --blue:#1769aa; --green:#16805b; --amber:#a56300; --bg:#f5f8fb; }
@@ -73,7 +74,7 @@
         <div class="metric"><small>4D support distance</small><strong id="dd">0.057</strong></div>
       </div>
       <div id="phase" class="phase">Preview · predicted primary phase: CA2SIO4</div>
-      <p id="nearest" class="note">Preview grid point: Al₂O₃ 11.70%, MgO 4.29%, FeO 9.74%, B 1.3. Support cutoff d₉₅ = 0.244.</p>
+      <p id="nearest" class="note">Preview grid point: Al₂O₃ 11.70%, MgO 4.29%, FeO 9.74%, B 1.3.</p>
     </div>
   </section>
   <section class="maps" aria-label="Composition slice maps">
@@ -183,7 +184,7 @@ function refresh() {
   $('tl').textContent=fmt(tl,1)+' K'; $('pa').textContent=fmt(pa*100,1)+'%'; $('pp').textContent=fmt(pp*100,1)+'%'; $('dd').textContent=fmt(dd,3);
   $('phase').textContent=(trust?'Trusted interpolation point':'Outside trusted screen')+' · predicted primary phase: '+phase;
   $('phase').className='phase'+(trust?'':' warn');
-  $('nearest').textContent='Nearest grid point: Al₂O₃ '+fmt(best[0],2)+'%, MgO '+fmt(best[1],2)+'%, FeO '+fmt(best[2],2)+'%, B '+fmt(best[3],1)+'. Support cutoff d₉₅ = '+fmt(state.metadata.d95,3)+'.';
+  $('nearest').textContent='Nearest grid point: Al₂O₃ '+fmt(best[0],2)+'%, MgO '+fmt(best[1],2)+'%, FeO '+fmt(best[2],2)+'%, B '+fmt(best[3],1)+'.';
   drawMaps();
 }
 function markDirty() { updateLabels(); $('calcStatus').textContent='Parameters changed · click Start calculation'; }
