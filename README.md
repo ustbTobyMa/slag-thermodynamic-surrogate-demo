@@ -15,7 +15,7 @@ This repository is a compact public demonstration of the workflow described in t
 
 Live demo: https://ustbtobyma.github.io/slag-thermodynamic-surrogate-demo/
 
-The page opens with a precomputed preview. After changing the composition controls, click **Start calculation** to update the nearest-grid prediction and the two linked slice maps. The maps use smooth interpolation for liquidus temperature and discrete coloring for primary phase, with trusted-domain cells outlined.
+The page opens with a precomputed preview. After changing the composition controls, click **Start calculation** to update the nearest-grid prediction and the two linked slice maps. The liquidus field is smoothly interpolated, while the categorical phase field uses spatially weighted phase regions; the trusted-domain boundary is shown as a dark contour.
 
 The demo does not call Thermo-Calc in the browser and should not be interpreted as an independent thermodynamic calculation. The Thermo-Calc database and proprietary software are not redistributed here.
 
