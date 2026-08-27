@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Reliability-aware slag surrogate</title>
+  <style>
+    :root { --ink:#17212b; --muted:#5b6b7a; --line:#dfe7ee; --blue:#1769aa; --green:#16805b; --amber:#a56300; --bg:#f5f8fb; }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:Inter,Segoe UI,Arial,sans-serif; color:var(--ink); background:var(--bg); }
+    main { max-width:1080px; margin:0 auto; padding:34px 20px 56px; }
+    .hero { background:linear-gradient(135deg,#123b5d,#1a6b91); color:white; border-radius:20px; padding:30px 32px; box-shadow:0 12px 30px #123b5d25; }
+    h1 { margin:0 0 8px; font-size:clamp(26px,4vw,42px); letter-spacing:-.02em; }
+    .hero p { margin:0; max-width:760px; line-height:1.55; color:#e8f4fb; }
+    .layout { display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-top:18px; }
+    .card { background:white; border:1px solid var(--line); border-radius:16px; padding:22px; box-shadow:0 5px 18px #17324a0b; }
+    .card h2 { margin:0 0 16px; font-size:18px; }
+    .control { margin:17px 0; }
+    .control label { display:flex; justify-content:space-between; font-weight:650; font-size:14px; margin-bottom:7px; }
+    input[type=range] { width:100%; accent-color:var(--blue); }
+    select { width:100%; padding:10px; border:1px solid var(--line); border-radius:8px; font-size:15px; background:white; }
+    .value { color:var(--blue); font-variant-numeric:tabular-nums; }
+    .metrics { display:grid; grid-template-columns:1fr 1fr; gap:11px; }
+    .metric { border:1px solid var(--line); border-radius:12px; padding:14px; background:#fbfdff; }
+    .metric small { display:block; color:var(--muted); font-size:12px; margin-bottom:4px; }
+    .metric strong { font-size:21px; }
+    .phase { margin:16px 0 0; padding:14px; border-radius:12px; background:#edf7f2; color:#145c43; font-weight:700; }
+    .phase.warn { background:#fff6e6; color:#805200; }
+    .note { color:var(--muted); font-size:13px; line-height:1.5; margin-top:17px; }
+    footer { margin-top:20px; color:var(--muted); font-size:12px; line-height:1.5; }
+    code { background:#eef3f7; border-radius:4px; padding:2px 5px; }
+    @media (max-width:760px) { .layout { grid-template-columns:1fr; } .hero { padding:24px; } }
+  </style>
+</head>
+<body>
+<main>
+  <section class="hero">
+    <h1>Reliability-aware slag surrogate</h1>
+    <p>Interactive demonstration of a four-dimensional Fe-saturated CaO–SiO₂–Al₂O₃–MgO–FeO design workflow. Adjust composition variables to inspect the nearest precomputed surrogate-grid prediction.</p>
+  </section>
+  <section class="layout">
+    <div class="card">
+      <h2>Composition inputs</h2>
+      <div class="control"><label>Al₂O₃ (wt.%) <span id="alv" class="value"></span></label><input id="al" type="range" min="8" max="25" step="0.1" value="12" /></div>
+      <div class="control"><label>MgO (wt.%) <span id="mgv" class="value"></span></label><input id="mg" type="range" min="0" max="15" step="0.1" value="4" /></div>
+      <div class="control"><label>FeO (wt.%) <span id="fev" class="value"></span></label><input id="fe" type="range" min="5" max="20" step="0.1" value="10" /></div>
+      <div class="control"><label>Basicity, B = CaO/SiO₂</label><select id="b"><option value="1.1">1.1</option><option value="1.3" selected>1.3</option><option value="1.5">1.5</option></select></div>
+      <p class="note">The page reports the closest point in a 31,680-point grid generated with the locked HGB liquidus model and RBF-SVC range/phase models. It is a fast screening aid, not a new Thermo-Calc calculation.</p>
+    </div>
+    <div class="card">
+      <h2>Surrogate output</h2>
+      <div class="metrics">
+        <div class="metric"><small>Predicted liquidus</small><strong id="tl">—</strong></div>
+        <div class="metric"><small>Above-range probability</small><strong id="pa">—</strong></div>
+        <div class="metric"><small>Phase confidence</small><strong id="pp">—</strong></div>
+        <div class="metric"><small>4D support distance</small><strong id="dd">—</strong></div>
+      </div>
+      <div id="phase" class="phase">Loading demo grid…</div>
+      <p id="nearest" class="note"></p>
+    </div>
+  </section>
+  <footer>Model concept: task-specific liquidus regression, range-status classification, phase classification, and explicit local-support screening. Data shown here are a public demonstration subset.</footer>
+</main>
+<script>
+const state = { columns: [], rows: [], metadata: {} };
+const $ = id => document.getElementById(id);
+function fmt(x, n=2) { return Number(x).toFixed(n); }
+function updateLabels() { $('alv').textContent=fmt($('al').value,1); $('mgv').textContent=fmt($('mg').value,1); $('fev').textContent=fmt($('fe').value,1); }
+function refresh() {
+  updateLabels();
+  if (!state.rows.length) return;
+  const target=[+$('al').value,+$('mg').value,+$('fe').value,+$('b').value];
+  let best=null, bestDist=Infinity;
+  for (const row of state.rows) {
+    const d=((row[0]-target[0])/17)**2+((row[1]-target[1])/15)**2+((row[2]-target[2])/15)**2+((row[3]-target[3])/.5)**2;
+    if (d<bestDist) { bestDist=d; best=row; }
+  }
+  const tl=best[4], pa=best[5], phase=best[6], pp=best[7], dd=best[8], trust=best[9];
+  $('tl').textContent=fmt(tl,1)+' K'; $('pa').textContent=fmt(pa*100,1)+'%'; $('pp').textContent=fmt(pp*100,1)+'%'; $('dd').textContent=fmt(dd,3);
+  $('phase').textContent=(trust?'Trusted interpolation point':'Outside trusted screen')+' · predicted primary phase: '+phase;
+  $('phase').className='phase'+(trust?'':' warn');
+  $('nearest').textContent='Nearest grid point: Al₂O₃ '+fmt(best[0],2)+'%, MgO '+fmt(best[1],2)+'%, FeO '+fmt(best[2],2)+'%, B '+fmt(best[3],1)+'. Support cutoff d₉₅ = '+fmt(state.metadata.d95,3)+'.';
+}
+['al','mg','fe','b'].forEach(id => $(id).addEventListener('input', refresh));
+fetch('../data/demo_grid.json').then(r=>r.json()).then(d=>{Object.assign(state,d); refresh();}).catch(e=>{$('phase').textContent='Demo grid could not be loaded. Run this page through a local web server.'; $('phase').className='phase warn';});
+</script>
+</body>
+</html>

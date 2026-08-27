@@ -1,0 +1,11 @@
+cff-version: 1.2.0
+title: "Reliability-aware slag surrogate: public demonstration"
+message: "If you use this demonstration, please cite the associated manuscript and repository."
+type: software
+authors:
+  - family-names: Ma
+    given-names: Weitao
+  - family-names: Song
+    given-names: Renbo
+version: "0.1.0"
+repository-code: "https://github.com/ustbTobyMa/slag-thermodynamic-surrogate-demo"
