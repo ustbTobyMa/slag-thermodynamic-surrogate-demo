@@ -1,6 +1,6 @@
-# Reliability-aware slag surrogate — public demonstration
+# CALPHAD-to-thermodynamic-atlas surrogate — public demonstration
 
-This repository is a compact public demonstration of the workflow described in the manuscript **“A reliability-aware four-dimensional thermodynamic surrogate for continuous design of Fe-saturated blast-furnace slags.”** It is designed to communicate the method through a quick interactive experience.
+This repository is a compact public demonstration of the framework described in the manuscript **“From discrete CALPHAD calculations to continuous thermodynamic design maps: A reliability-aware surrogate framework for multicomponent slags.”** It shows how discrete thermodynamic anchors can be reconstructed as a continuous, queryable design atlas while keeping local-support diagnostics visible.
 
 ## What is included
 
