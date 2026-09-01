@@ -9,7 +9,15 @@ This repository is a compact public demonstration of the workflow described in t
 - `models/`: the locked demonstration models: HGB for liquidus temperature and RBF-SVC models for range status and primary phase.
 - `data/demo_grid.json`: precomputed predictions on a 31,680-point four-dimensional grid for the browser demo.
 - `docs/index.html`: a dependency-free interactive page suitable for GitHub Pages, with a ready-to-view default preview, an explicit **Start calculation** action, and linked Al₂O₃–MgO liquidus-temperature and primary-phase slice maps.
-- `scripts/prepare_release.py`: the transparent preparation script used to select the public tables and generate the demo grid.
+- `src/predict.py`: a compact command-line inference interface for the released models.
+
+## Public release scope
+
+This repository intentionally provides the key computational artifacts needed to inspect and use the surrogate:
+the anchor table, locked models, precomputed grid, interactive page, and a lightweight inference interface. The
+full private Thermo-Calc batch-generation and model-development workflow is not redistributed. This keeps the
+public release focused on the transferable method and avoids coupling the demonstration to local project paths or
+software-specific automation.
 
 ## Command-line inference
 
@@ -25,9 +33,6 @@ inference. The example environment is pinned in `requirements.txt` and was teste
 page uses the nearest precomputed grid state for instant interaction, whereas this command performs direct model
 inference.
 
-`scripts/prepare_release.py` can be rerun either from the original project tree or from a clean clone. In a clean
-clone it reuses the released tables and model files and regenerates the precomputed grid deterministically.
-
 ## Interactive demo
 
 Live demo: https://ustbtobyma.github.io/slag-thermodynamic-surrogate-demo/
@@ -38,6 +43,6 @@ The page is a lightweight surrogate-model demonstration; full method details are
 
 ## Citation
 
-Please cite the associated manuscript and this repository when using the demonstration. This repository is archived as release **v1.0.1** for submission. If the associated article is accepted, the final article DOI will be added here.
+Please cite the associated manuscript and this repository when using the demonstration. This repository is archived as release **v1.1.0** for submission. If the associated article is accepted, the final article DOI will be added here.
 
 The Thermo-Calc software/database files are not redistributed. The released tables, scripts, locked models, and precomputed grid are provided for inspection and reuse of the surrogate workflow.
