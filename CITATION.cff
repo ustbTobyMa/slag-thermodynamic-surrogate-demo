@@ -7,5 +7,5 @@ authors:
     given-names: Weitao
   - family-names: Song
     given-names: Renbo
-version: "0.1.0"
+version: "1.0.0"
 repository-code: "https://github.com/ustbTobyMa/slag-thermodynamic-surrogate-demo"

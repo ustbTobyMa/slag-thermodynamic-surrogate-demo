@@ -21,4 +21,6 @@ The page is a lightweight surrogate-model demonstration; full method details are
 
 ## Citation
 
-Please cite the associated manuscript and this repository when using the demonstration. The repository is intended to be updated with the final DOI and version tag after publication.
+Please cite the associated manuscript and this repository when using the demonstration. This repository is archived as release **v1.0.0** for submission. If the associated article is accepted, the final article DOI will be added here.
+
+The Thermo-Calc software/database files are not redistributed. The released tables, scripts, locked models, and precomputed grid are provided for inspection and reuse of the surrogate workflow.
