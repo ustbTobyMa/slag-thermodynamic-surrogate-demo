@@ -35,10 +35,14 @@ CANDIDATE_COLUMNS = [
 
 def make_public_tables() -> None:
     DATA_DIR.mkdir(parents=True, exist_ok=True)
-    anchors = pd.read_csv(ANCHOR_SRC)[ANCHOR_COLUMNS].copy()
+    # The script can be rerun from the original project or from a clean clone
+    # of this public repository.  In the latter case, reuse the released table.
+    anchor_source = ANCHOR_SRC if ANCHOR_SRC.exists() else DATA_DIR / "anchor_thermodynamic_sample_319.csv"
+    anchors = pd.read_csv(anchor_source)[ANCHOR_COLUMNS].copy()
     anchors.to_csv(DATA_DIR / "anchor_thermodynamic_sample_319.csv", index=False, float_format="%.6f")
 
-    candidates = pd.read_csv(CANDIDATE_SRC)[CANDIDATE_COLUMNS].copy()
+    candidate_source = CANDIDATE_SRC if CANDIDATE_SRC.exists() else DATA_DIR / "candidate_confirmation_top6.csv"
+    candidates = pd.read_csv(candidate_source)[CANDIDATE_COLUMNS].copy()
     candidates.to_csv(DATA_DIR / "candidate_confirmation_top6.csv", index=False, float_format="%.6f")
 
 
@@ -62,7 +66,14 @@ def leave_one_out_d95(anchors: np.ndarray, ranges: np.ndarray) -> float:
 
 
 def make_demo_grid() -> None:
-    model_dir = LOCKED_MODELS
+    model_dir = LOCKED_MODELS if LOCKED_MODELS.exists() else MODEL_DIR
+    required_models = ["liquidus_histgb.joblib", "range_status_svc_rbf.joblib", "primary_phase_svc_rbf.joblib"]
+    missing = [name for name in required_models if not (model_dir / name).exists()]
+    if missing:
+        raise FileNotFoundError(
+            "Missing released model files: " + ", ".join(missing) +
+            ". Place them in models/ or run this script from the source project."
+        )
     liquidus = joblib.load(model_dir / "liquidus_histgb.joblib")
     range_model = joblib.load(model_dir / "range_status_svc_rbf.joblib")
     phase_model = joblib.load(model_dir / "primary_phase_svc_rbf.joblib")
@@ -124,7 +135,13 @@ def make_demo_grid() -> None:
 def copy_locked_models() -> None:
     MODEL_DIR.mkdir(parents=True, exist_ok=True)
     for name in ["liquidus_histgb.joblib", "range_status_svc_rbf.joblib", "primary_phase_svc_rbf.joblib"]:
-        shutil.copy2(LOCKED_MODELS / name, MODEL_DIR / name)
+        source = LOCKED_MODELS / name
+        if source.exists():
+            shutil.copy2(source, MODEL_DIR / name)
+        elif not (MODEL_DIR / name).exists():
+            raise FileNotFoundError(
+                f"Missing {name}. Place the released model in models/ or run this script from the source project."
+            )
 
 
 if __name__ == "__main__":

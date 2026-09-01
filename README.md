@@ -11,6 +11,23 @@ This repository is a compact public demonstration of the workflow described in t
 - `docs/index.html`: a dependency-free interactive page suitable for GitHub Pages, with a ready-to-view default preview, an explicit **Start calculation** action, and linked Al₂O₃–MgO liquidus-temperature and primary-phase slice maps.
 - `scripts/prepare_release.py`: the transparent preparation script used to select the public tables and generate the demo grid.
 
+## Command-line inference
+
+The released models can also be queried locally without Thermo-Calc:
+
+```bash
+python src/predict.py --al2o3 12 --mgo 4 --feo 10 --basicity 1.3
+```
+
+The JSON output reports the predicted liquidus, above-range probability, primary-phase confidence, nearest-anchor
+distance, and the trusted-interpolation flag. Inputs are checked against the published composition bounds before
+inference. The example environment is pinned in `requirements.txt` and was tested with Python 3.7–3.10. The browser
+page uses the nearest precomputed grid state for instant interaction, whereas this command performs direct model
+inference.
+
+`scripts/prepare_release.py` can be rerun either from the original project tree or from a clean clone. In a clean
+clone it reuses the released tables and model files and regenerates the precomputed grid deterministically.
+
 ## Interactive demo
 
 Live demo: https://ustbtobyma.github.io/slag-thermodynamic-surrogate-demo/
